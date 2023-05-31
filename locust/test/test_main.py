@@ -1185,6 +1185,29 @@ class MyUser(HttpUser):
             self.assertIn("No tasks defined on MyUser", stderr)
             self.assertEqual(1, proc.returncode)
 
+    def test_error_when_malformed_locust_file(self):
+        malformed_content = """
+from locust import User, task, constant, events
+class TestUser(User):
+    wait_time = constant(3)
+    @task
+    def my_task(self):
+        print("running my_task()")
+    def incomplete_method(self:
+        print("incomplete method")
+    """
+
+        with TemporaryDirectory() as temp_dir:
+            file_path = f"{temp_dir}/malformed_locust.py"
+            with open(file_path, "w") as file:
+                file.write(malformed_content)
+
+            proc = subprocess.Popen(["locust", "-f", file_path], stdout=PIPE, stderr=PIPE, text=True)
+            stdout, stderr = proc.communicate()
+
+            self.assertIn("SyntaxError", stderr)
+            self.assertNotEqual(0, proc.returncode)
+
 
 class DistributedIntegrationTests(ProcessIntegrationTest):
     def test_expect_workers(self):
